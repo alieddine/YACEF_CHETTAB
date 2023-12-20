@@ -452,7 +452,7 @@ def main_loop(settings):
         mouse = pg.mouse.get_pos()
         angle_x_z = int(360 * (u0 - mouse[0]) / width)
         angle_y_z = int(180 * (v0 - mouse[1]) / height)
-        print(angle_x_z, angle_y_z)
+        print(player_position)
         if pg.mouse.get_rel() != (0, 0):
             add_action('angle', angle_x_z=angle_x_z, angle_y_z=angle_y_z)
             if mouse[0] == screen.get_width() - 1:
