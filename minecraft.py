@@ -344,7 +344,7 @@ def start_window(settings):
         screen.blit(font2.render("Options", True, (255, 255, 255)), (screen.get_width() / 2 - button.get_width() / 2 + button_small.get_width() / 2 - font2.size("Options")[0] / 2, screen.get_height() / 2 + button_small.get_height() * 2 + font2.size("0")[1] / 2))
         if screen.get_width() / 2 - button.get_width() / 2 <= mouse[0] <= screen.get_width() / 2 - button.get_width() / 2 + button_small.get_width() and screen.get_height() / 2 + button_small.get_height() * 2 <= mouse[1] <= screen.get_height() / 2 + button_small.get_height() * 3:
             mouse_hand = True
-            pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - button.get_width() / 2, screen.get_height() / 2 + button_small.get_height() * 2, button_small.get_width(), button_small.get_height()), 2)
+            pg.draw.rect(screen, (255, 25<5, 255), (screen.get_width() / 2 - button.get_width() / 2, screen.get_height() / 2 + button_small.get_height() * 2, button_small.get_width(), button_small.get_height()), 2)
 
         screen.blit(button_small, (screen.get_width() / 2 + button.get_width() / 2 - button_small.get_width(), screen.get_height() / 2 + button.get_height() * 2))
         screen.blit(font2.render("Quit Game", True, (255, 255, 255)), (screen.get_width() / 2 + button.get_width() / 2 - button_small.get_width() / 2 - font2.size("Quit Game")[0] / 2, screen.get_height() / 2 + button_small.get_height() * 2 + font2.size("0")[1] / 2))

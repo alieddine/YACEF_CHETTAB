@@ -361,15 +361,12 @@ def handle_client(client_socket, player_id):
             data = json.dumps({
                 'cubes': cubes
             }).encode("utf-8")
-        leng = str(len(data))
-        print("leng", leng)
-        client_socket.send(json.dumps({'i': leng}).encode("utf-8"))
-        time.sleep(0.2)
         for i in range(0, len(data), 1000):
             chunk = data[i:i + 1000]
             client_socket.send(chunk)
-            print(chunk)
+            client_socket.recv(1024)
 
+        client_socket.send("end".encode('utf-8'))
 
         while True:
             data = client_socket.recv(1024)

@@ -537,19 +537,12 @@ def client(setting):
     my_id = data.get('player_id')
     me = players.pop(my_id)
     received_data = ""
-    a = client_socket.recv(1000).decode('utf-8')
-    i = round(int(json.loads(a).get("i")) / 1000)
-    print(i)
     while True:
-        print(i)
-        if i == 0:
-            break
-        i -= 1
-
         chunk = client_socket.recv(1000).decode('utf-8')
-
+        if chunk == 'end':
+            break
         received_data += chunk
-    print(received_data)
+        client_socket.send('nothing'.encode('utf-8'))
 
 
     data = json.loads(received_data)
