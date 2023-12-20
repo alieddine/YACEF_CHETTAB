@@ -1,21 +1,17 @@
-import time
-import pyautogui
-import keyboard
+map3 = {
 
-is_running = False
+}
 
-# Set up a hotkey to toggle the script
-keyboard.add_hotkey('ctrl+alt+m', lambda: toggle_script())
 
-def move_mouse():
-    pyautogui.move(5, 0)  # Move the mouse by 5 pixels to the right
+# Function to generate the key for the cubes
+def generate_cube_key(x, y, z):
+    return f'cube {x} {y} {z}'
 
-def toggle_script():
-    global is_running
-    is_running = not is_running
 
-# Run the script
-while True:
-    if is_running:
-        move_mouse()
-    time.sleep(0.1)
+# Add more elements to the map
+x, y, z = 0, 4, 0  # Initial coordinates
+for x in range(20):
+    for z in range(20):
+        map3[generate_cube_key(x * 2, y, z * 2)] = {'position': [x * 2, y, z * 2], 'texture': 'None'}
+
+print(map3)

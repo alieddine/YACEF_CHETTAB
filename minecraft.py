@@ -14,7 +14,7 @@ class Settings:
         self.sfx_volume = 50
         self.focal = 4
         self.sfx = True
-        self.cube_resolution = (0, (1, 2, 4))
+        self.cube_resolution = (0, (1, 2, 4, 16))
         self.show_fps = False
         self.width, self.height = 1500, 900
         self.screen_info = screen_info.current_w, screen_info.current_h
@@ -70,7 +70,7 @@ class Settings:
                         elif self.screen.get_width() / 2 + 10 <= mouse[0] <= self.screen.get_width() / 2 + 10 + button_small.get_width() and self.screen.get_height() / 4 <= mouse[1] <= self.screen.get_height() / 4 + button_small.get_height():
                             self.show_fps = not self.show_fps
                         elif self.screen.get_width() / 2 + 10 <= mouse[0] <= self.screen.get_width() / 2 + 10 + button_small.get_width() and self.screen.get_height() / 4 + button_small.get_height() * 1.5 <= mouse[1] <= self.screen.get_height() / 4 + button_small.get_height() * 1.5 + button_small.get_height():
-                            self.cube_resolution = (self.cube_resolution[0] + 1) % 3, self.cube_resolution[1]
+                            self.cube_resolution = (self.cube_resolution[0] + 1) % 4, self.cube_resolution[1]
                         elif self.moving_music_slider or self.screen.get_width() / 2 + 10 + (self.focal * (button_volume.get_width() - button_slider.get_width()) / 20) <= mouse[0] <= self.screen.get_width() / 2 + 10 + (self.focal * (button_volume.get_width() - button_slider.get_width()) / 20) + button_slider.get_width() and self.screen.get_height() / 4 + button_small.get_height() * 3 <= mouse[1] <= self.screen.get_height() / 4 + button_small.get_height() * 3 + button_slider.get_height():
                             mouse_buttons = pg.mouse.get_pressed()
                             if mouse_buttons[0]:
@@ -181,6 +181,9 @@ class Settings:
                 self.screen.blit(font.render("cube  resolution  :  8X8", True, (255, 255, 255)), (self.screen.get_width() / 2 + button_small.get_width() / 2 + 10 - font.size("cube  resolution  :  16X16")[0] / 2, self.screen.get_height() / 4 + button_small.get_height() * 1.5 + button_small.get_height() / 2 - font.size("FullScreen : OFF")[1] / 2))
             elif self.cube_resolution[0] == 2:
                 self.screen.blit(font.render("cube  resolution  :  4X4", True, (255, 255, 255)), (self.screen.get_width() / 2 + button_small.get_width() / 2 + 10 - font.size("cube  resolution  :  16X16")[0] / 2, self.screen.get_height() / 4 + button_small.get_height() * 1.5 + button_small.get_height() / 2 - font.size("FullScreen : OFF")[1] / 2))
+            elif self.cube_resolution[0] == 3:
+                self.screen.blit(font.render("cube  resolution  :  1X1", True, (255, 255, 255)), (self.screen.get_width() / 2 + button_small.get_width() / 2 + 10 - font.size("cube  resolution  :  16X16")[0] / 2, self.screen.get_height() / 4 + button_small.get_height() * 1.5 + button_small.get_height() / 2 - font.size("FullScreen : OFF")[1] / 2))
+
 
             self.screen.blit(button_small, (self.screen.get_width() / 2 - button_small.get_width() / 2, self.screen.get_height() - button_small.get_height() * 2))
             if self.screen.get_width() / 2 - button_small.get_width() / 2 <= mouse[0] <= self.screen.get_width() / 2 + button_small.get_width() / 2 and self.screen.get_height() - button_small.get_height() * 2 <= mouse[1] <= self.screen.get_height() - button_small.get_height():
@@ -216,6 +219,7 @@ screen_info = pg.display.Info()
 width, height = 1500, 900
 settings = Settings(screen_info)
 surfaces = []
+# surfaces = pg.image.load("src/frame_0.jpg")
 
 
 def main():
@@ -238,9 +242,10 @@ def main():
                 if event.key == pg.K_ESCAPE:
                     sys.exit()
         screen.fill((239, 51, 62))
-        screen.blit(font_mojang.render("Mojang", True, (255, 255, 255)),(screen.get_width() / 2 - font_mojang.size("Mojang")[0] / 2,screen.get_height() / 2 - font_mojang.size("Mojang")[1]))
+        screen.blit(font_mojang.render("The Boys", True, (255, 255, 255)),(screen.get_width() / 2 - font_mojang.size("Mojang")[0] / 2,screen.get_height() / 2 - font_mojang.size("Mojang")[1]))
         screen.blit(font1.render("STUDIOS", True, (255, 255, 255)),(screen.get_width() / 2 - font1.size("STUDIOS")[0] / 2,screen.get_height() / 2 + font1.size("STUDIOS")[1] / 2))
         pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - (font_mojang.size("Mojang")[0] + 50) / 2, screen.get_height() / 2 + font1.size("STUDIOS")[1] + 50, font_mojang.size("Mojang")[0] + 50, 30), 3)
+        # surfaces.append(pg.surfarray.make_surface(surface_arrays[index]))
         surfaces.append(pg.surfarray.make_surface(surface_arrays[index]))
         pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - (font_mojang.size("Mojang")[0] + 50) / 2 + 5, screen.get_height() / 2 + font1.size("STUDIOS")[1] + 50 + 5,index * bar_size, 30 - 10))
         index += 1
@@ -286,8 +291,8 @@ def start_window(settings):
                     sys.exit()
 
         if time() - past_time >= 0.1 and not settings.show:
-        # if time() - past_time >= 100000:
             screen.blit(surfaces[index], (0, 0))
+            # screen.blit(surfaces, (0, 0))
             index += 1
             past_time = time()
             index = index % 450
@@ -336,6 +341,10 @@ def start_window(settings):
         if screen.get_width() / 2 + button.get_width() / 2 - button_small.get_width() <= mouse[0] <= screen.get_width() / 2 + button.get_width() / 2 and screen.get_height() / 2 + button_small.get_height() * 2 <= mouse[1] <= screen.get_height() / 2 + button_small.get_height() * 3:
             mouse_hand = True
             pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 + button.get_width() / 2 - button_small.get_width(), screen.get_height() / 2 + button_small.get_height() * 2, button_small.get_width(), button_small.get_height()), 2)
+        font2.set_bold(True)
+        screen.blit(pg.transform.rotate(font2.render("By The Boys", True, (204, 204, 0)), 45), (screen.get_width() / 2 + logo.get_width() / 2 - 48, logo.get_height() + 2))
+        font2.set_bold(False)
+        screen.blit(pg.transform.rotate(font2.render("By The Boys", True, (255, 255, 0)), 45), (screen.get_width() / 2 + logo.get_width() / 2 - 50, logo.get_height()))
 
         if mouse_hand:
             pg.mouse.set_cursor(pg.SYSTEM_CURSOR_HAND)

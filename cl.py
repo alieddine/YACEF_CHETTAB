@@ -1,6 +1,8 @@
 import socket
 import sys
 import threading
+from math import ceil
+
 import pygame as pg
 import json
 import numpy as np
@@ -15,6 +17,9 @@ players_lock = threading.Lock()
 cubes = {}
 cubes_changed = False
 cubes_lock = threading.Lock()
+body = {}
+body_changed = False
+body_lock = threading.Lock()
 movement_action = {'force': 0, 'angle': 0}
 movement_action_lock = threading.Lock()
 actions = []
@@ -33,8 +38,29 @@ texture = {
         'face': pg.image.load('src/player_back.png'),
         'side': pg.image.load('src/player_side.png')
     },
+    'body': {
+        'top': pg.image.load('src/body_top.png'),
+        'bottom': pg.image.load('src/body_bottom.png'),
+        'back_face': pg.image.load('src/body_back.png'),
+        'face': pg.image.load('src/body_front.png'),
+        'side': pg.image.load('src/body_side.png')
+    },
+    'planks_oak': {
+        'top': pg.image.load('src/planks_oak.png'),
+        'bottom': pg.image.load('src/planks_oak.png'),
+        'back_face': pg.image.load('src/planks_oak.png'),
+        'face': pg.image.load('src/planks_oak.png'),
+        'side': pg.image.load('src/planks_oak.png')
+    },
+    'diamond_ore': {
+        'top': pg.image.load('src/diamond_ore.png'),
+        'bottom': pg.image.load('src/diamond_ore.png'),
+        'back_face': pg.image.load('src/diamond_ore.png'),
+        'face': pg.image.load('src/diamond_ore.png'),
+        'side': pg.image.load('src/diamond_ore.png')
+    },
     'default': {
-        'default': pg.image.load('src/grass_top.png')
+        'default': pg.image.load('src/brick.png')
     }
 }
 
@@ -100,7 +126,6 @@ def get_players():
         players_changed = False
         return copy.deepcopy(list(players.values()))
 
-
 def get_my_position():
     with players_lock:
         return list(me.get('position'))
@@ -112,6 +137,17 @@ def set_cube(id_, cube):
         cubes_changed = True
         cubes[id_] = cube
 
+def set_body(id_, b):
+    global body_changed, body, body_lock
+    with body_lock:
+        body_changed = True
+        body[id_] = b
+
+def get_body():
+    global body_changed, body, body_lock
+    with body_lock:
+        body_changed = False
+        return copy.deepcopy(list(body.values()))
 
 def delete_cube(id_):
     global cubes_changed, cubes, cubes_lock
@@ -172,9 +208,12 @@ def send_data(client_socket):
                 continue
             if operation == 'add':
                 d = player_data.get('data', None)
-                d['points'] = generate_point_of_cube(d.get('position'), size=1)
+                d['points'] = generate_point_of_cube(d.get('position'), size=.7)
                 if d is not None:
                     set_player(player_id, d)
+                    if player_id != my_id:
+                        set_body(player_id, {"position": [d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]], "points": generate_point_of_cuboid([d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]]), 'texture': 'body'})
+
             elif operation == 'delete':
                 delete_player(player_id)
         for cube_id, cube_data in cubes_.items():
@@ -201,6 +240,25 @@ def generate_point_of_cube(center, size=2):
         [1, -1, 1, 1],
         [1, 1, 1, 1],
         [-1, 1, 1, 1]
+    ]).T
+    transform_martice = np.array([
+        [half_size, 0, 0, center[0]],
+        [0, half_size, 0, center[1]],
+        [0, 0, half_size, center[2]]
+    ])
+    return np.dot(transform_martice, points).T
+
+def generate_point_of_cuboid(center, size=2):
+    half_size = size / 2
+    points = np.array([
+        [-.75, -1, -.25, 1],
+        [.75, -1, -.25, 1],
+        [.75, 2, -.25, 1],
+        [-.75, 2, -.25, 1],
+        [-.75, -1, .25, 1],
+        [.75, -1, .25, 1],
+        [.75, 2, .25, 1],
+        [-.75, 2, .25, 1]
     ]).T
     transform_martice = np.array([
         [half_size, 0, 0, center[0]],
@@ -312,6 +370,7 @@ def main_loop(settings):
     K = np.array([[f * alpha, 0, u0], [0, f * beta, v0]]).T
     pg.event.set_grab(True)
     all_players = get_players()
+    all_body = get_body()
     all_cubes = get_cubes()
     pg.mouse.set_visible(False)
 
@@ -322,6 +381,12 @@ def main_loop(settings):
     cursor = pg.transform.scale(pg.image.load("src/cursor.png"), (10, 10))
     show_inventory_window = False
     clock = pg.time.Clock()
+    selected_item = 0
+    item_size = inventory.get_width() // 9, inventory.get_height()
+    item_grass = pg.transform.scale(pg.image.load("src/grass_side.png"), (item_size[0] - 15, item_size[1] - 15))
+    item_brick = pg.transform.scale(pg.image.load("src/brick.png"), (item_size[0] - 15, item_size[1] - 15))
+    item_planks_oak = pg.transform.scale(pg.image.load("src/planks_oak.png"), (item_size[0] - 15, item_size[1] - 15))
+    item_diamond_ore = pg.transform.scale(pg.image.load("src/diamond_ore.png"), (item_size[0] - 15, item_size[1] - 15))
     while True:
         clock.tick(60000)
         player_position = get_my_position()
@@ -332,15 +397,46 @@ def main_loop(settings):
             elif event.type == pg.MOUSEBUTTONDOWN:
                 mouse_pressed = pg.mouse.get_pressed()
                 if mouse_pressed[2]:
-                    add_action('build', cube='grass')
+                    if selected_item == 0:
+                        texture = "grass"
+                    elif selected_item == 1:
+                        texture = "brick"
+                    elif selected_item == 2:
+                        texture = "diamond_ore"
+                    elif selected_item == 3:
+                        texture = "planks_oak"
+                    else:
+                        texture = "None"
+                    add_action('build', cube=texture)
                 if mouse_pressed[0]:
                     add_action('destroy')
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     settings.main_track.stop()
+                    pg.event.set_grab(False)
                     settings.show = True
                 elif event.key == pg.K_e:
                     show_inventory_window = not show_inventory_window
+                elif event.key == pg.K_1:
+                    selected_item = 0
+                elif event.key == pg.K_2:
+                    selected_item = 1
+                elif event.key == pg.K_3:
+                    selected_item = 2
+                elif event.key == pg.K_4:
+                    selected_item = 3
+                elif event.key == pg.K_5:
+                    selected_item = 4
+                elif event.key == pg.K_6:
+                    selected_item = 5
+                elif event.key == pg.K_7:
+                    selected_item = 6
+                elif event.key == pg.K_8:
+                    selected_item = 7
+                elif event.key == pg.K_9:
+                    selected_item = 8
+
+
         if settings.show:
             settings.show_settings_interface()
             f = round(settings.focal)
@@ -348,6 +444,7 @@ def main_loop(settings):
             settings.main_track.play(-1)
             pg.mouse.set_visible(False)
             resolution = settings.cube_resolution[1][settings.cube_resolution[0]]
+            pg.event.set_grab(True)
         keys = pg.key.get_pressed()
         mouse = pg.mouse.get_pos()
         angle_x_z = int(360 * (u0 - mouse[0]) / width)
@@ -397,15 +494,29 @@ def main_loop(settings):
         set_movement_action(force, movement_angle)
         if players_changed:
             all_players = get_players()
+        if body_changed:
+            all_body = get_body()
+
         if cubes_changed:
             all_cubes = get_cubes()
-        objects = sorted(all_players + all_cubes, key=lambda elem: np.linalg.norm(np.dot(np.dot(np.array(elem.get('position')) - player_position, rotate_x_z[int(angle_x_z)]), rotate_y_z[int(angle_y_z)])), reverse=True)
+        objects = sorted(all_players + all_cubes + all_body, key=lambda elem: np.linalg.norm(np.dot(np.dot(np.array(elem.get('position')) - player_position, rotate_x_z[int(angle_x_z)]), rotate_y_z[int(angle_y_z)])), reverse=True)
         for obj in objects:
             draw_obj(screen, obj, angle_x_z, angle_y_z, player_position, f, K, resolution)
         if show_inventory_window:
             screen.blit(inventory_window, (screen.get_width() / 2 - inventory_window.get_width() / 2, screen.get_height() / 2 - inventory_window.get_height() / 2))
 
         screen.blit(inventory, (screen.get_width() / 2 - inventory.get_width() / 2, screen.get_height() - inventory.get_height() * 1.5))
+
+        screen.blit(item_grass, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 0 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
+
+        screen.blit(item_brick, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 1 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
+
+        screen.blit(item_diamond_ore, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 2 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
+
+        screen.blit(item_planks_oak, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 3 + 7.5 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
+
+        pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * selected_item, screen.get_height() - inventory.get_height() * 1.5, item_size[0], item_size[1]), 5)
+
         screen.blit(cursor, (screen.get_width() / 2 - cursor.get_width() / 2, screen.get_height() / 2 - cursor.get_height() / 2))
         if settings.show_fps:
             screen.blit(font2.render("FPS  :  " + str(round(clock.get_fps())), True, (255, 255, 255)), (5, 5))
@@ -413,18 +524,42 @@ def main_loop(settings):
 
 
 def client(setting):
-    global cubes, players, my_id, me
+    global cubes, players, my_id, me, body
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(("127.0.0.1", 12345))
-    data = json.loads(client_socket.recv(1024).decode('utf-8'))
+    # client_socket.connect(("127.0.0.1", 12345))
+    client_socket.connect(("192.168.63.5", 12345))
+
+    v = client_socket.recv(1024).decode('utf-8')
+    print("hi")
+    data = json.loads(v)
+    players = data.get('players')
+    for player_id, player_data in players.items():
+        players[player_id]['points'] = generate_point_of_cube(players[player_id].get('position'), size=.7)
+    my_id = data.get('player_id')
+    me = players.pop(my_id)
+    received_data = ""
+    a = client_socket.recv(1000).decode('utf-8')
+    i = round(int(json.loads(a).get("i")) / 1000)
+    print(i)
+    while True:
+        print(i)
+        if i == 0:
+            break
+        i -= 1
+
+        chunk = client_socket.recv(1000).decode('utf-8')
+
+        received_data += chunk
+    print(received_data)
+
+
+    data = json.loads(received_data)
     cubes = data.get('cubes')
     for cube in cubes.values():
         cube['points'] = generate_point_of_cube(cube.get('position'))
-    players = data.get('players')
-    for player in players.values():
-        player['points'] = generate_point_of_cube(player.get('position'), size=1)
-    my_id = data.get('player_id')
-    me = players.pop(my_id)
+
+        # set_body(player_id, {"position": [players[player_id].get('position')[0], players[player_id].get('position')[1] + 1,players[player_id].get('position')[2]], "points": generate_point_of_cuboid([players[player_id].get('position')[0], players[player_id].get('position')[1] + 1,players[player_id].get('position')[2]]), 'texture': 'grass'})
+
     threading.Thread(target=send_data, args=(client_socket,)).start()
     # threading.Thread(target=main_loop).start()
     main_loop(setting)
