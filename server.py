@@ -270,7 +270,7 @@ def cube_intersection1(all_cubes, player_position, angle_x_z, angle_y_z, min_dis
 
 
 def cube_intersection(all_cubes, player_position, angle_x_z, angle_y_z, min_distance=12):
-    # arrow = np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(angle_x_z) % 360]), rotate_y_z[int(-angle_y_z) % 360])
+    # arrow = np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(angle_x_z) % 360]), rotate_y_z[int(-angle_y_z) % 360]) a
     arrow = np.dot(np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(-angle_x_z) % 360]),
                   rotate_y_z[int(-angle_y_z * cos[int(angle_x_z) % 360]) % 360]),
            rotate_x_y[int(-angle_y_z * sin[int(angle_x_z) % 360]) % 360])
