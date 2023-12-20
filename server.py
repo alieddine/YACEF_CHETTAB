@@ -22,6 +22,7 @@ map1 = {
     'cube 0 4 16': {'position': [0, 4, 16], 'texture': 'grass'},
     'cube -2 4 18': {'position': [-2, 4, 18], 'texture': 'grass'},
     'cube -2 4 20': {'position': [-2, 4, 20], 'texture': 'grass'},
+    'cube -2 -1 20': {'position': [-2, -1, 20], 'texture': 'grass'},
 }
 
 map2 = {
@@ -269,11 +270,11 @@ def cube_intersection1(all_cubes, player_position, angle_x_z, angle_y_z, min_dis
 
 
 def cube_intersection(all_cubes, player_position, angle_x_z, angle_y_z, min_distance=12):
-    player_position = np.array(player_position)
     # arrow = np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(angle_x_z) % 360]), rotate_y_z[int(-angle_y_z) % 360])
     arrow = np.dot(np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(-angle_x_z) % 360]),
                   rotate_y_z[int(-angle_y_z * cos[int(angle_x_z) % 360]) % 360]),
            rotate_x_y[int(-angle_y_z * sin[int(angle_x_z) % 360]) % 360])
+    player_position = np.array(player_position) + arrow
     all_cubes = map(lambda x: (np.array(x.get('position'))-player_position, x.get('position')), all_cubes)
     all_cubes = list(map(lambda x: {'position': x[0], 'old position': x[1], 'distance': np.linalg.norm(x[0]), 'inter_x': (arrow * ((x[0][0]-1)/arrow[0] if arrow[0]!=0 else 0.1), arrow * ((x[0][0]+1)/arrow[0] if arrow[0]!=0 else 0.1)), 'inter_y': (arrow * ((x[0][1]-1)/arrow[1] if arrow[1]!=0 else 0.1), arrow * ((x[0][1]+1)/arrow[1] if arrow[1]!=0 else 0.1)), 'inter_z': (arrow * ((x[0][2]-1)/arrow[2] if arrow[2]!=0 else 0.1), arrow * ((x[0][2]+1)/arrow[2] if arrow[2]!=0 else 0.1))}, all_cubes))
 
@@ -302,11 +303,11 @@ def cube_intersection(all_cubes, player_position, angle_x_z, angle_y_z, min_dist
     return [int(i) for i in r]
 
 def destroyed_cube(all_cubes, player_position, angle_x_z, angle_y_z, min_distance=12):
-    player_position = np.array(player_position)
     # arrow = np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(angle_x_z) % 360]), rotate_y_z[int(-angle_y_z) % 360])
     arrow = np.dot(np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(-angle_x_z) % 360]),
                           rotate_y_z[int(-angle_y_z * cos[int(angle_x_z) % 360]) % 360]),
                    rotate_x_y[int(-angle_y_z * sin[int(angle_x_z) % 360]) % 360])
+    player_position = np.array(player_position) + arrow
     all_cubes = map(lambda x: np.array(x.get('position')) - player_position, all_cubes)
     all_cubes = list(map(lambda x: {'position': x, 'distance': np.linalg.norm(x), 'inter_x': (
     arrow * ((x[0] - 1) / arrow[0] if arrow[0] != 0 else .1),

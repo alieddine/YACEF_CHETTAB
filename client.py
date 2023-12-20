@@ -390,6 +390,7 @@ def main_loop(settings):
     while True:
         clock.tick(60000)
         player_position = get_my_position()
+        print(player_position)
         screen.fill((66, 135, 245))
         for event in pg.event.get():
             if event.type == pg.QUIT:

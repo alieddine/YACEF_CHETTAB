@@ -363,7 +363,6 @@ def start_window(settings):
         pg.display.update()
 
 
-
 if __name__ == "__main__":
     main()
 
