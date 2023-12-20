@@ -3,7 +3,7 @@ import pickle
 import sys
 from random import randint
 from time import time
-from cl import *
+from client import *
 import pygame as pg
 
 
@@ -213,8 +213,16 @@ myappid = 'mycompany.myproduct.subproduct.version'  # icon
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 pg.display.set_caption("minecrfat by The Boys")
 font1.set_bold(True)
-with open('surface.pickle', 'rb') as file:
-    surface_arrays = pickle.load(file)
+moving_bg = True
+default_background = None
+try:
+    with open('surface.pickle', 'rb') as file:
+        surface_arrays = pickle.load(file)
+except:
+    moving_bg = False
+if not moving_bg:
+    default_background = pg.image.load("intrface gui/b1.jpg")
+
 screen_info = pg.display.Info()
 width, height = 1500, 900
 settings = Settings(screen_info)
@@ -223,7 +231,6 @@ surfaces = []
 
 
 def main():
-
 
     screen = pg.display.set_mode((width, height))
     settings.screen = screen
@@ -246,7 +253,8 @@ def main():
         screen.blit(font1.render("STUDIOS", True, (255, 255, 255)),(screen.get_width() / 2 - font1.size("STUDIOS")[0] / 2,screen.get_height() / 2 + font1.size("STUDIOS")[1] / 2))
         pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - (font_mojang.size("Mojang")[0] + 50) / 2, screen.get_height() / 2 + font1.size("STUDIOS")[1] + 50, font_mojang.size("Mojang")[0] + 50, 30), 3)
         # surfaces.append(pg.surfarray.make_surface(surface_arrays[index]))
-        surfaces.append(pg.surfarray.make_surface(surface_arrays[index]))
+        if moving_bg:
+            surfaces.append(pg.surfarray.make_surface(surface_arrays[index]))
         pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - (font_mojang.size("Mojang")[0] + 50) / 2 + 5, screen.get_height() / 2 + font1.size("STUDIOS")[1] + 50 + 5,index * bar_size, 30 - 10))
         index += 1
         if index == 450:
@@ -289,31 +297,33 @@ def start_window(settings):
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     sys.exit()
-
-        if time() - past_time >= 0.1 and not settings.show:
-            screen.blit(surfaces[index], (0, 0))
-            # screen.blit(surfaces, (0, 0))
-            index += 1
-            past_time = time()
-            index = index % 450
-            if index == 400:
-                start_black_filter = True
-            if start_black_filter:
-                black_filter = pg.surface.Surface((screen.get_width(), screen.get_height()))
-                black_filter.fill((0, 0, 0))
-                black_filter.set_alpha(alpha)
-                screen.blit(black_filter, (0, 0))
-                if black_filter_going_on:
-                    alpha += 5
-                    if alpha == 255:
-                        black_filter_going_on = False
-                else:
-                    alpha -= 5
-                    if alpha == 0:
-                        black_filter_going_on = True
-                        start_black_filter = False
-                        index = randint(70, 380)
-                        index = 0
+        if not moving_bg:
+            screen.blit(default_background, (0, 0))
+        else:
+            if time() - past_time >= 0.1 and not settings.show:
+                screen.blit(surfaces[index], (0, 0))
+                # screen.blit(surfaces, (0, 0))
+                index += 1
+                past_time = time()
+                index = index % 450
+                if index == 400:
+                    start_black_filter = True
+                if start_black_filter:
+                    black_filter = pg.surface.Surface((screen.get_width(), screen.get_height()))
+                    black_filter.fill((0, 0, 0))
+                    black_filter.set_alpha(alpha)
+                    screen.blit(black_filter, (0, 0))
+                    if black_filter_going_on:
+                        alpha += 5
+                        if alpha == 255:
+                            black_filter_going_on = False
+                    else:
+                        alpha -= 5
+                        if alpha == 0:
+                            black_filter_going_on = True
+                            start_black_filter = False
+                            index = randint(70, 380)
+                            index = 0
         if settings.show:
             settings.show_settings_interface()
             screen = settings.screen
