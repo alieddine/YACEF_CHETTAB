@@ -390,7 +390,7 @@ def main_loop(settings):
     while True:
         clock.tick(60000)
         player_position = get_my_position()
-        print(player_position)
+
         screen.fill((66, 135, 245))
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -440,8 +440,11 @@ def main_loop(settings):
         if settings.show:
             settings.show_settings_interface()
             f = round(settings.focal)
-            K = np.array([[f * alpha, 0, u0], [0, f * beta, v0]]).T
+            screen = settings.screen
             settings.main_track.play(-1)
+            u0 = screen.get_width() // 2
+            v0 = screen.get_height() // 2
+            K = np.array([[f * alpha, 0, u0], [0, f * beta, v0]]).T
             pg.mouse.set_visible(False)
             resolution = settings.cube_resolution[1][settings.cube_resolution[0]]
             pg.event.set_grab(True)
@@ -449,6 +452,7 @@ def main_loop(settings):
         mouse = pg.mouse.get_pos()
         angle_x_z = int(360 * (u0 - mouse[0]) / width)
         angle_y_z = int(180 * (v0 - mouse[1]) / height)
+        print(angle_x_z, angle_y_z)
         if pg.mouse.get_rel() != (0, 0):
             add_action('angle', angle_x_z=angle_x_z, angle_y_z=angle_y_z)
             if mouse[0] == screen.get_width() - 1:
@@ -530,7 +534,6 @@ def client(setting):
     # client_socket.connect(("192.168.63.5", 12345))
 
     v = client_socket.recv(1024).decode('utf-8')
-    print("hi")
     data = json.loads(v)
     players = data.get('players')
     for player_id, player_data in players.items():
