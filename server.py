@@ -235,7 +235,7 @@ def read_all_items_from_pandora_box(player_id):
 
 
 def cube_intersection1(all_cubes, player_position, angle_x_z, angle_y_z, min_distance=12):
-    player_position = np.array(player_position)
+    player_position = np.array(player_position)+1
     # arrow = np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(angle_x_z) % 360]), rotate_y_z[int(-angle_y_z) % 360])
     arrow = np.dot(np.dot(np.dot(np.array([0, 0, 1]), rotate_x_z[int(-angle_x_z) % 360]),
                   rotate_y_z[int(-angle_y_z * cos[int(angle_x_z) % 360]) % 360]),
@@ -483,7 +483,8 @@ def main_loop():
 def main():
     global cubes, map1, map2, map3
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(("192.168.63.5", 12345))
+    # server_socket.bind(("192.168.63.5", 12345))
+    server_socket.bind(("127.0.0.1", 12345))
     server_socket.listen(5)
     i = 0
     C = True

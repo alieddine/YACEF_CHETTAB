@@ -372,7 +372,7 @@ def main_loop(settings):
     all_players = get_players()
     all_body = get_body()
     all_cubes = get_cubes()
-    pg.mouse.set_visible(False)
+    # pg.mouse.set_visible(False)
 
     settings.menu_track.stop()
     settings.main_track.play(-1)
@@ -395,8 +395,7 @@ def main_loop(settings):
             if event.type == pg.QUIT:
                 sys.exit()
             elif event.type == pg.MOUSEBUTTONDOWN:
-                mouse_pressed = pg.mouse.get_pressed()
-                if mouse_pressed[2]:
+                if event.button == 3:
                     if selected_item == 0:
                         texture = "grass"
                     elif selected_item == 1:
@@ -408,7 +407,7 @@ def main_loop(settings):
                     else:
                         texture = "None"
                     add_action('build', cube=texture)
-                if mouse_pressed[0]:
+                if event.button == 1:
                     add_action('destroy')
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
@@ -526,8 +525,8 @@ def main_loop(settings):
 def client(setting):
     global cubes, players, my_id, me, body
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # client_socket.connect(("127.0.0.1", 12345))
-    client_socket.connect(("192.168.63.5", 12345))
+    client_socket.connect(("127.0.0.1", 12345))
+    # client_socket.connect(("192.168.63.5", 12345))
 
     v = client_socket.recv(1024).decode('utf-8')
     print("hi")
