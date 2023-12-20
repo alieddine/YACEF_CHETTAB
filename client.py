@@ -212,7 +212,7 @@ def send_data(client_socket):
                 if d is not None:
                     set_player(player_id, d)
                     if player_id != my_id:
-                        set_body(player_id, {"position": [d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]], "points": generate_point_of_cuboid([d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]]), 'texture': 'body'})
+                        set_body(player_id, {"position": [d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]], "points": generate_point_of_cuboid([d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]]), 'texture': 'body', 'angle_x_z': d.get('angle_x_z')})
 
             elif operation == 'delete':
                 delete_player(player_id)
@@ -322,7 +322,7 @@ def draw_obj(screen, obj, angle_x_z, angle_y_z, player_position, f, K, resolutio
     points = np.array(obj.get('points'))
     obj_angle_x_z = obj.get('angle_x_z', None)
     if obj_angle_x_z is not None:
-        obj_angle_y_z = obj.get('angle_y_z')
+        obj_angle_y_z = obj.get('angle_y_z', 0)
         points = np.dot(np.dot(np.dot(points - obj_position, rotate_x_z[int(-obj_angle_x_z)%360]), rotate_y_z[int(-obj_angle_y_z*cos[int(obj_angle_x_z)%360])%360]), rotate_x_y[int(-obj_angle_y_z*sin[int(obj_angle_x_z)%360])%360]) + obj_position
     points = np.dot(np.dot(points - player_position, rotate_x_z[int(angle_x_z)%360]), rotate_y_z[int(angle_y_z)%360])
     if np.mean(points, axis=0)[2] <= -1:
