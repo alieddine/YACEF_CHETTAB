@@ -8,6 +8,8 @@ import json
 import numpy as np
 import copy
 
+pg.init()
+font = pg.font.Font("fonts/Mojang-Regular.ttf", 20)
 
 my_id = None
 me = None
@@ -20,6 +22,9 @@ cubes_lock = threading.Lock()
 body = {}
 body_changed = False
 body_lock = threading.Lock()
+name_tag = {}
+name_tag_changed = False
+name_tag_lock = threading.Lock()
 movement_action = {'force': 0, 'angle': 0}
 movement_action_lock = threading.Lock()
 actions = []
@@ -143,6 +148,20 @@ def set_body(id_, b):
         body_changed = True
         body[id_] = b
 
+def set_name_tag(id_, b):
+    global name_tag_changed, name_tag, name_tag_lock
+    with name_tag_lock:
+        name_tag_changed = True
+        name_tag[id_] = b
+
+def get_name_tag():
+    global name_tag_changed, name_tag, name_tag_lock
+    with name_tag_lock:
+        name_tag_changed = False
+        return copy.deepcopy(list(name_tag.values()))
+
+
+
 def get_body():
     global body_changed, body, body_lock
     with body_lock:
@@ -187,9 +206,23 @@ def get_actions():
         actions = []
         return data
 
+from PIL import Image, ImageDraw, ImageFont
+
+
+def create_number_image(number, output_filename="output.png"):
+    image_size = (32, 32)
+    image = Image.new("RGB", image_size, "white")
+    draw = ImageDraw.Draw(image)
+    font_path = "arial.ttf"
+    font_size = 32
+    font = ImageFont.truetype(font_path, font_size)
+
+    draw.text((0, 0), str(number), fill="black", font=font)
+    flipped_image = image.transpose(Image.FLIP_LEFT_RIGHT)
+    flipped_image.save(output_filename)
 
 def send_data(client_socket):
-    global movement_action
+    global movement_action, font
     while True:
         data_to_send = {
             "movement_action": json.loads(get_movement_action().decode('utf-8')),  # on_long_click
@@ -213,6 +246,10 @@ def send_data(client_socket):
                     set_player(player_id, d)
                     if player_id != my_id:
                         set_body(player_id, {"position": [d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]], "points": generate_point_of_cuboid([d.get('position')[0], d.get('position')[1] + 1.5, d.get('position')[2]]), 'texture': 'body', 'angle_x_z': d.get('angle_x_z')})
+                        create_number_image(int(player_id[-1]), str(player_id) + ".png")
+                        texture[player_id] = {'face': pg.image.load(player_id + ".png")}
+                        # texture[player_id] = {'face': pg.image.load("test2.png")}
+                        set_name_tag(player_id, {"position": [d.get('position')[0], d.get('position')[1] - 1, d.get('position')[2]], "points": generate_point_of_tag([d.get('position')[0], d.get('position')[1] - 1, d.get('position')[2]]), 'texture': player_id, 'angle_x_z': d.get('angle_x_z'), "tag": (255, 255, 255)})
 
             elif operation == 'delete':
                 delete_player(player_id)
@@ -267,6 +304,21 @@ def generate_point_of_cuboid(center, size=2):
     ])
     return np.dot(transform_martice, points).T
 
+def generate_point_of_tag(center, size=0.5):
+    half_size = size / 2
+    points = np.array([
+        [-1, -1, 1, 1],
+        [1, -1, 1, 1],
+        [1, 1, 1, 1],
+        [-1, 1, 1, 1]
+    ]).T
+    transform_martice = np.array([
+        [half_size, 0, 0, center[0]],
+        [0, half_size, 0, center[1]],
+        [0, 0, half_size, center[2]]
+    ])
+    return np.dot(transform_martice, points).T
+
 
 def transform_points(points):
     points_x = points[..., 0]
@@ -277,21 +329,28 @@ def transform_points(points):
 
 
 def save_surfaces(transformed_coordinates):
-    return sorted([
-        [[0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]], [2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]],
-         [3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]]],  # face
-        [[4, np.linalg.norm(transformed_coordinates[4]), transformed_coordinates[4]], [5, np.linalg.norm(transformed_coordinates[5]), transformed_coordinates[5]], [6, np.linalg.norm(transformed_coordinates[6]), transformed_coordinates[6]],
-         [7, np.linalg.norm(transformed_coordinates[7]), transformed_coordinates[7]]],  # back face
-        [[0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]], [5, np.linalg.norm(transformed_coordinates[5]), transformed_coordinates[5]],
-         [4, np.linalg.norm(transformed_coordinates[4]), transformed_coordinates[4]]],  # top
-        [[2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]], [3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]], [7, np.linalg.norm(transformed_coordinates[7]), transformed_coordinates[7]],
-         [6, np.linalg.norm(transformed_coordinates[6]), transformed_coordinates[6]]],  # buttom
-        [[5, np.linalg.norm(transformed_coordinates[5]), transformed_coordinates[5]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]],[2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]], [6, np.linalg.norm(transformed_coordinates[6]), transformed_coordinates[6]],],
-        [[4, np.linalg.norm(transformed_coordinates[4]), transformed_coordinates[4]], [0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]],[3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]], [7, np.linalg.norm(transformed_coordinates[7]), transformed_coordinates[7]],]
-    ], key=lambda x: np.mean([i[1] for i in x]), reverse=True)[-3:]
+    if len(transformed_coordinates) < 5:
+        return sorted([
+            [[0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]], [2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]],
+             [3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]]],  # face
+
+        ], key=lambda x: np.mean([i[1] for i in x]), reverse=True)[-3:]
+    else:
+        return sorted([
+            [[0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]], [2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]],
+             [3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]]],  # face
+            [[4, np.linalg.norm(transformed_coordinates[4]), transformed_coordinates[4]], [5, np.linalg.norm(transformed_coordinates[5]), transformed_coordinates[5]], [6, np.linalg.norm(transformed_coordinates[6]), transformed_coordinates[6]],
+             [7, np.linalg.norm(transformed_coordinates[7]), transformed_coordinates[7]]],  # back face
+            [[0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]], [5, np.linalg.norm(transformed_coordinates[5]), transformed_coordinates[5]],
+             [4, np.linalg.norm(transformed_coordinates[4]), transformed_coordinates[4]]],  # top
+            [[2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]], [3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]], [7, np.linalg.norm(transformed_coordinates[7]), transformed_coordinates[7]],
+             [6, np.linalg.norm(transformed_coordinates[6]), transformed_coordinates[6]]],  # buttom
+            [[5, np.linalg.norm(transformed_coordinates[5]), transformed_coordinates[5]], [1, np.linalg.norm(transformed_coordinates[1]), transformed_coordinates[1]],[2, np.linalg.norm(transformed_coordinates[2]), transformed_coordinates[2]], [6, np.linalg.norm(transformed_coordinates[6]), transformed_coordinates[6]],],
+            [[4, np.linalg.norm(transformed_coordinates[4]), transformed_coordinates[4]], [0, np.linalg.norm(transformed_coordinates[0]), transformed_coordinates[0]],[3, np.linalg.norm(transformed_coordinates[3]), transformed_coordinates[3]], [7, np.linalg.norm(transformed_coordinates[7]), transformed_coordinates[7]],]
+        ], key=lambda x: np.mean([i[1] for i in x]), reverse=True)[-3:]
 
 
-def draw_surface(surface, quad, img, resolution, intensity=1):
+def draw_surface(surface, quad, img, resolution, remove_color=None , intensity=1):
     points = dict()
     w = img.get_size()[0] // resolution
     h = img.get_size()[1] // resolution
@@ -310,6 +369,16 @@ def draw_surface(surface, quad, img, resolution, intensity=1):
             #     pass
             # if 0<=p_1[0]<=width and 0<=p_1[1]<=height:
             #     pass
+            if remove_color is not None:
+                if img.get_at((x * resolution, y * resolution))[0] == remove_color[0] and img.get_at((x * resolution, y * resolution))[1] == remove_color[1] and img.get_at((x * resolution, y * resolution))[2] == remove_color[2]:
+                    continue
+                else:
+                    pg.draw.polygon(
+                        surface,
+                        [0, 0 ,0],
+                        [p_0, p_2, p_1, p_3]
+                    )
+                    continue
             pg.draw.polygon(
                 surface,
                 np.array(img.get_at((x * resolution, y * resolution)))*intensity,
@@ -321,6 +390,11 @@ def draw_obj(screen, obj, angle_x_z, angle_y_z, player_position, f, K, resolutio
     obj_position = obj.get('position')
     points = np.array(obj.get('points'))
     obj_angle_x_z = obj.get('angle_x_z', None)
+    tag = obj.get('tag', None)
+    if tag is not None:
+        remove_color = (255, 255, 255)
+    else:
+        remove_color = None
     if obj_angle_x_z is not None:
         obj_angle_y_z = obj.get('angle_y_z', 0)
         points = np.dot(np.dot(np.dot(points - obj_position, rotate_x_z[int(-obj_angle_x_z)%360]), rotate_y_z[int(-obj_angle_y_z*cos[int(obj_angle_x_z)%360])%360]), rotate_x_y[int(-obj_angle_y_z*sin[int(obj_angle_x_z)%360])%360]) + obj_position
@@ -338,15 +412,15 @@ def draw_obj(screen, obj, angle_x_z, angle_y_z, player_position, f, K, resolutio
             tex = texture.get(obj.get('texture'), texture.get('default'))
             def_tex = tex.get('default')
             if surface[0][0] == 0 and surface[1][0] == 1 and surface[2][0] == 5 and surface[3][0] == 4:
-                draw_surface(screen, p, tex.get('top', def_tex), resolution)
+                draw_surface(screen, p, tex.get('top', def_tex), resolution, remove_color=remove_color)
             elif surface[0][0] == 2 and surface[1][0] == 3 and surface[2][0] == 7 and surface[3][0] == 6:
-                draw_surface(screen, p, tex.get('bottom', def_tex), resolution)
+                draw_surface(screen, p, tex.get('bottom', def_tex), resolution, remove_color=remove_color)
             elif surface[0][0] == 0 and surface[1][0] == 1 and surface[2][0] == 2 and surface[3][0] == 3:
-                draw_surface(screen, p, tex.get('face', def_tex), resolution)
+                draw_surface(screen, p, tex.get('face', def_tex), resolution, remove_color=remove_color)
             elif surface[0][0] == 4 and surface[1][0] == 5 and surface[2][0] == 6 and surface[3][0] == 7:
-                draw_surface(screen, p, tex.get('back_face', def_tex), resolution)
+                draw_surface(screen, p, tex.get('back_face', def_tex), resolution, remove_color=remove_color)
             else:
-                draw_surface(screen, p, tex.get('side', def_tex), resolution)
+                draw_surface(screen, p, tex.get('side', def_tex), resolution, remove_color=remove_color)
 
 
 def main_loop(settings):
@@ -371,6 +445,7 @@ def main_loop(settings):
     pg.event.set_grab(True)
     all_players = get_players()
     all_body = get_body()
+    all_name_tag = get_name_tag()
     all_cubes = get_cubes()
     # pg.mouse.set_visible(False)
 
@@ -452,7 +527,6 @@ def main_loop(settings):
         mouse = pg.mouse.get_pos()
         angle_x_z = int(360 * (u0 - mouse[0]) / width)
         angle_y_z = int(180 * (v0 - mouse[1]) / height)
-        print(player_position)
         if pg.mouse.get_rel() != (0, 0):
             add_action('angle', angle_x_z=angle_x_z, angle_y_z=angle_y_z)
             if mouse[0] == screen.get_width() - 1:
@@ -501,9 +575,12 @@ def main_loop(settings):
         if body_changed:
             all_body = get_body()
 
+        if name_tag_changed:
+            all_name_tag = get_name_tag()
+
         if cubes_changed:
             all_cubes = get_cubes()
-        objects = sorted(all_players + all_cubes + all_body, key=lambda elem: np.linalg.norm(np.dot(np.dot(np.array(elem.get('position')) - player_position, rotate_x_z[int(angle_x_z)]), rotate_y_z[int(angle_y_z)])), reverse=True)
+        objects = sorted(all_players + all_cubes + all_body + all_name_tag, key=lambda elem: np.linalg.norm(np.dot(np.dot(np.array(elem.get('position')) - player_position, rotate_x_z[int(angle_x_z)]), rotate_y_z[int(angle_y_z)])), reverse=True)
         for obj in objects:
             draw_obj(screen, obj, angle_x_z, angle_y_z, player_position, f, K, resolution)
         if show_inventory_window:
@@ -528,7 +605,7 @@ def main_loop(settings):
 
 
 def client(setting):
-    global cubes, players, my_id, me, body
+    global cubes, players, my_id, me, body, name_tag
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(("127.0.0.1", 12345))
     # client_socket.connect(("192.168.63.5", 12345))

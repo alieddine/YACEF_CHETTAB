@@ -10,11 +10,11 @@ import pygame as pg
 class Settings:
     def __init__(self, screen_info):
         self.full_screen = False
-        self.music_volume = 50 
-        self.sfx_volume = 50
+        self.music_volume = 0
+        self.sfx_volume = 0
         self.focal = 4
         self.sfx = True
-        self.cube_resolution = (0, (1, 2, 4, 16))
+        self.cube_resolution = (1, (1, 2, 4, 16))
         self.show_fps = False
         self.width, self.height = 1500, 900
         self.screen_info = screen_info.current_w, screen_info.current_h
