@@ -115,6 +115,17 @@ def update_player_angle(name, angle_x_z, angle_y_z):
         player['angle_y_z'] = angle_y_z
 
 
+def update_player_health_minus(name):
+    with players_lock:
+        player = players[name]
+        player['health'] -= 1
+
+def update_player_health_reset(name):
+    with players_lock:
+        player = players[name]
+        player['health'] = 5
+
+
 def update_player_jump_force(name, value):
     with players_lock:
         players[name]['jump_force'] += value
@@ -133,6 +144,10 @@ def get_player_jump_force(name):
 def get_player_position(name):
     with players_lock:
         return copy.deepcopy(players[name].get('position'))
+
+def get_player_health(name):
+    with players_lock:
+        return players[name].get('health')
 
 
 def get_player_angles(name):
@@ -340,7 +355,7 @@ def destroyed_cube(all_cubes, player_position, angle_x_z, angle_y_z, min_distanc
 
 def handle_client(client_socket, player_id):
     try:
-        set_player(player_id, {'position': [0, - 1, 0], 'angle_x_z': 0, 'angle_y_z': 0, 'jump_force': 0, 'texture': 'player'})
+        set_player(player_id, {'position': [0, - 1, 0], 'angle_x_z': 0, 'angle_y_z': 0, 'jump_force': 0, 'texture': 'player', "health": 5})
         players_actions[player_id] = {'movement_action': {'force': 0, 'angle': 0}, 'actions': []}
         players_actions_lock[player_id] = threading.Lock()
         pandora_box[player_id] = {'cubes': {}, 'players': {}}
@@ -434,7 +449,17 @@ def main_loop():
                             d_position[2])
                         delete_cube(cube_id)
                         add_new_item_to_all_pandora_boxes('cube', 'delete', {'cube_id': cube_id})
-
+                elif type_ == "kill":
+                    for player_id_colide in p:
+                        if player_id_colide != player_id and get_player_health(player_id_colide) != 0:
+                            if abs(get_player_position(player_id_colide)[0] - player_position[0]) <= 1.5 and abs(get_player_position(player_id_colide)[1] - player_position[1]) <= 1.5 and abs(get_player_position(player_id_colide)[2] - player_position[2]) <= 1.5:
+                                player_stat_changed = True
+                                update_player_health_minus(player_id_colide)
+                                print("killing " + player_id_colide)
+                                print(get_player_health(player_id_colide))
+                elif type_ == "respawn":
+                    player_stat_changed = True
+                    update_player_health_reset(player_id)
 
             movement_angle = int(movement_action.get('angle', 0))
             x = movement_speed * movement_action.get('force', 0) * cos[movement_angle]
@@ -447,6 +472,8 @@ def main_loop():
             # z : z=0 alt--> y= masafa binathom - (nisf el kotr ta3 cube + nisf el kotr dyali)
             # top : jump_force = 0
             # down : y=0
+
+
             for cube in cubes_value:
                 cube_position = cube.get('position')
                 if 2 >= player_position[1] + y - cube_position[1] >= -4:

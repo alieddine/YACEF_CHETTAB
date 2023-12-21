@@ -135,6 +135,9 @@ def get_my_position():
     with players_lock:
         return list(me.get('position'))
 
+def get_my_health():
+    with players_lock:
+        return me.get('health')
 
 def set_cube(id_, cube):
     global cubes_changed, cubes, cubes_lock
@@ -454,6 +457,9 @@ def main_loop(settings):
     inventory = pg.transform.scale_by(pg.image.load("intrface gui/inventory.png"),  3)
     inventory_window = pg.transform.scale_by(pg.image.load("intrface gui/inventory_window.png"), 2)
     cursor = pg.transform.scale(pg.image.load("src/cursor.png"), (10, 10))
+    heart = pg.transform.scale(pg.image.load("intrface gui/heart.png"), (35, 35))
+    heart2 = pg.transform.scale(pg.image.load("intrface gui/heart2.png"), (35, 35))
+    button_small = pg.transform.scale(pg.image.load("intrface gui/button.png"), (400, 40))
     show_inventory_window = False
     clock = pg.time.Clock()
     selected_item = 0
@@ -462,54 +468,73 @@ def main_loop(settings):
     item_brick = pg.transform.scale(pg.image.load("src/brick.png"), (item_size[0] - 15, item_size[1] - 15))
     item_planks_oak = pg.transform.scale(pg.image.load("src/planks_oak.png"), (item_size[0] - 15, item_size[1] - 15))
     item_diamond_ore = pg.transform.scale(pg.image.load("src/diamond_ore.png"), (item_size[0] - 15, item_size[1] - 15))
+    item_diamond_sword = pg.transform.scale(pg.image.load("intrface gui/sword.png"), (item_size[0] - 15, item_size[1] - 15))
+    death = False
     while True:
+        mouse_hand = False
+        mouse = pg.mouse.get_pos()
+
         clock.tick(60000)
         player_position = get_my_position()
-
+        player_health = get_my_health()
+        if player_health == 0:
+            death = True
         screen.fill((66, 135, 245))
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 sys.exit()
             elif event.type == pg.MOUSEBUTTONDOWN:
-                if event.button == 3:
-                    if selected_item == 0:
-                        texture = "grass"
-                    elif selected_item == 1:
-                        texture = "brick"
-                    elif selected_item == 2:
-                        texture = "diamond_ore"
-                    elif selected_item == 3:
-                        texture = "planks_oak"
-                    else:
-                        texture = "None"
-                    add_action('build', cube=texture)
-                if event.button == 1:
-                    add_action('destroy')
+                if not death:
+                    if event.button == 3:
+                        if selected_item == 0:
+                            texture = "grass"
+                        elif selected_item == 1:
+                            texture = "brick"
+                        elif selected_item == 2:
+                            texture = "diamond_ore"
+                        elif selected_item == 3:
+                            texture = "planks_oak"
+                        elif selected_item == 4:
+                            texture = "None"
+                        else:
+                            texture = "None"
+                        if not selected_item == 4:
+                            add_action('build', cube=texture)
+                    if event.button == 1:
+                        if selected_item == 4:
+                            add_action('kill')
+                        else:
+                            add_action('destroy')
+                else:
+                    if screen.get_width() / 2 - button_small.get_width() / 2 <= mouse[0] <= screen.get_width() / 2 + button_small.get_width() / 2 and screen.get_height() / 2 - button_small.get_height() / 2 <= mouse[1] <= screen.get_height() / 2 + button_small.get_height() / 2:
+                        death = False
+                        add_action('respawn')
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     settings.main_track.stop()
                     pg.event.set_grab(False)
                     settings.show = True
-                elif event.key == pg.K_e:
-                    show_inventory_window = not show_inventory_window
-                elif event.key == pg.K_1:
-                    selected_item = 0
-                elif event.key == pg.K_2:
-                    selected_item = 1
-                elif event.key == pg.K_3:
-                    selected_item = 2
-                elif event.key == pg.K_4:
-                    selected_item = 3
-                elif event.key == pg.K_5:
-                    selected_item = 4
-                elif event.key == pg.K_6:
-                    selected_item = 5
-                elif event.key == pg.K_7:
-                    selected_item = 6
-                elif event.key == pg.K_8:
-                    selected_item = 7
-                elif event.key == pg.K_9:
-                    selected_item = 8
+                elif not death:
+                    if event.key == pg.K_e:
+                        show_inventory_window = not show_inventory_window
+                    elif event.key == pg.K_1:
+                        selected_item = 0
+                    elif event.key == pg.K_2:
+                        selected_item = 1
+                    elif event.key == pg.K_3:
+                        selected_item = 2
+                    elif event.key == pg.K_4:
+                        selected_item = 3
+                    elif event.key == pg.K_5:
+                        selected_item = 4
+                    elif event.key == pg.K_6:
+                        selected_item = 5
+                    elif event.key == pg.K_7:
+                        selected_item = 6
+                    elif event.key == pg.K_8:
+                        selected_item = 7
+                    elif event.key == pg.K_9:
+                        selected_item = 8
 
 
         if settings.show:
@@ -523,28 +548,29 @@ def main_loop(settings):
             pg.mouse.set_visible(False)
             resolution = settings.cube_resolution[1][settings.cube_resolution[0]]
             pg.event.set_grab(True)
-        keys = pg.key.get_pressed()
-        mouse = pg.mouse.get_pos()
-        angle_x_z = int(360 * (u0 - mouse[0]) / width)
-        angle_y_z = int(180 * (v0 - mouse[1]) / height)
-        if pg.mouse.get_rel() != (0, 0):
-            add_action('angle', angle_x_z=angle_x_z, angle_y_z=angle_y_z)
-            if mouse[0] == screen.get_width() - 1:
-                pg.mouse.set_pos((0, mouse[1]))
-            elif mouse[0] == 0:
-                pg.mouse.set_pos((screen.get_width(), mouse[1]))
+
         x = 0
         y = 0
-        if keys[pg.K_a]:
-            x -= 1
-        if keys[pg.K_d]:
-            x += 1
-        if keys[pg.K_w]:
-            y += 1
-        if keys[pg.K_s]:
-            y -= 1
-        if keys[pg.K_SPACE]:
-            add_action('jump')
+        if not death:
+            keys = pg.key.get_pressed()
+            angle_x_z = int(360 * (u0 - mouse[0]) / width)
+            angle_y_z = int(180 * (v0 - mouse[1]) / height)
+            if pg.mouse.get_rel() != (0, 0):
+                add_action('angle', angle_x_z=angle_x_z, angle_y_z=angle_y_z)
+                if mouse[0] == screen.get_width() - 1:
+                    pg.mouse.set_pos((0, mouse[1]))
+                elif mouse[0] == 0:
+                    pg.mouse.set_pos((screen.get_width(), mouse[1]))
+            if keys[pg.K_a]:
+                x -= 1
+            if keys[pg.K_d]:
+                x += 1
+            if keys[pg.K_w]:
+                y += 1
+            if keys[pg.K_s]:
+                y -= 1
+            if keys[pg.K_SPACE]:
+                add_action('jump')
         force = 0
         movement_angle = angle_x_z
         if x != 0 or y != 0:
@@ -595,12 +621,34 @@ def main_loop(settings):
         screen.blit(item_diamond_ore, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 2 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
 
         screen.blit(item_planks_oak, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 3 + 7.5 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
+        screen.blit(item_diamond_sword, (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * 4 + 7.5 + 7.5, screen.get_height() - inventory.get_height() * 1.5 + 7.5))
 
         pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - inventory.get_width() / 2 + item_size[0] * selected_item, screen.get_height() - inventory.get_height() * 1.5, item_size[0], item_size[1]), 5)
 
         screen.blit(cursor, (screen.get_width() / 2 - cursor.get_width() / 2, screen.get_height() / 2 - cursor.get_height() / 2))
         if settings.show_fps:
             screen.blit(font2.render("FPS  :  " + str(round(clock.get_fps())), True, (255, 255, 255)), (5, 5))
+
+        for index in range(int(player_health)):
+            screen.blit(heart, (screen.get_width() / 2 - inventory.get_width() / 2 + heart.get_width() * (index + .2), screen.get_height() - inventory.get_height() * 1.5 - heart.get_height() * 1.2))
+
+        for index in range(5 - int(player_health)):
+            screen.blit(heart2, (screen.get_width() / 2 - inventory.get_width() / 2 + heart.get_width() * (index + int(player_health) + .2), screen.get_height() - inventory.get_height() * 1.5 - heart.get_height() * 1.2))
+        if death:
+            dark_fillter = pg.surface.Surface((screen.get_width(), screen.get_height()))
+            dark_fillter.set_alpha(125)
+            screen.blit(dark_fillter, (0, 0))
+            screen.blit(button_small, (screen.get_width() / 2 - button_small.get_width() / 2, screen.get_height() / 2 - button_small.get_height() / 2))
+            if screen.get_width() / 2 - button_small.get_width() / 2 <= mouse[0] <= screen.get_width() / 2 + button_small.get_width() / 2 and screen.get_height() / 2 - button_small.get_height() / 2 <= mouse[1] <=  screen.get_height() / 2 + button_small.get_height() / 2:
+                pg.draw.rect(screen, (255, 255, 255), (screen.get_width() / 2 - button_small.get_width() / 2, screen.get_height() / 2 - button_small.get_height() / 2, button_small.get_width(), button_small.get_height()), 2)
+                mouse_hand = True
+            screen.blit(font2.render("respawn", True, (255, 255, 255)), (screen.get_width() / 2 - font2.size("respawn")[0] /2, screen.get_height() / 2 - font2.size("respawn")[1] /2))
+
+        if mouse_hand:
+            pg.mouse.set_cursor(pg.SYSTEM_CURSOR_HAND)
+        else:
+            pg.mouse.set_cursor(pg.SYSTEM_CURSOR_ARROW)
+
         pg.display.update()
 
 
